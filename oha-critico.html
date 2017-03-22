@@ -1,0 +1,284 @@
+﻿<!--comentários em código html são escritos com essa sintaxe-->
+<html>
+    <!--começo do cabecalho do documento HTML5-->
+    
+    <head>
+        <!--define a codificação de caracteres sendo a UTF-8 (UNICODE)-->
+        <meta http-equiv="Content-Type" content="text/html" charset="utf-8">
+        <!--título do documento-->
+        <title>Oscilador Harmônico Simples - Crítico</title>
+		<script type="text/javascript" src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+		
+		<script>
+		
+            //===============
+            //variaveis de controle do tempo
+            //===============
+            //tempo transcorrido
+            var t = 0;
+            //intervalo de tempo entre os quadros
+            var intervaloTempo = 0;
+            //momento inicial do movimento
+            var primeiroTempo = 0;
+            //momento atualizado da funcao
+            var ultimoTempo = 0;
+            //quantidade de frames transcorridos
+            var frame = 0;
+            //armazena o retorno do método setInterval (utilizado na parada da execução do loop)
+            var controleDesenho;
+			
+			//retorna a altura e a largura do nosso elemento <canvas>
+            var heightCanvasAnimacao = 0;
+            var widthCanvasAnimacao = 0;
+
+            //velocidade,posicao em x e massa do bloco
+            var bloco = { x : 0 , massa : 0 , x_inicial : 0 , v_inicial : 0 , beta : 0 , b : 0 , A : 0 , B: 0};          
+			
+			//controla o mouse
+			var mouse = {x :  0 , clicado : false};
+			
+			var getMousePosition = function(e) {
+				mouse.x = e.pageX - canvas.offsetLeft;																			
+				if (mouse.clicado) {			
+					bloco.x = mouse.x - (widthCanvasAnimacao / 2) - 25;
+					bloco.x_inicial = mouse.x - (widthCanvasAnimacao / 2) - 25;					
+					t = 0;				
+				}
+			};
+			
+            //constante da mola
+            var mola = {
+                k: 0
+            };            
+
+            function redesenhar() {
+
+                // ========================
+                //rotinas de ajuste de tempo
+                // ========================
+                // incrementa o número de frames decorridos desde o início
+                frame++;
+
+                //pega o tempo no começo de cada iteração
+                var date = new Date();
+                var agoraTempo = date.getTime();
+
+                //calcula a diferença de tempo em relação a última iteração
+                intervaloTempo = agoraTempo - ultimoTempo;
+
+                //incrementa o tempo total com o intervalo decorrido
+                t += intervaloTempo;
+
+                //coloca o tempo atual da iteração como sendo a da última iteração
+                ultimoTempo = agoraTempo;
+                // ========================
+
+                // ========================
+                // trabalha com o canvas e as variáveis
+                // ========================
+                //joga o canvas nas variáveis declaradas globalmente
+                canvas = document.getElementById("canvasAnimacao");
+                context = canvas.getContext("2d");
+
+                //retorna a altura e a largura do nosso elemento <canvas>
+                heightCanvasAnimacao = canvas.height;
+                widthCanvasAnimacao = canvas.width;
+                // ======================== 															
+												
+				if (!mouse.clicado) {			
+				
+					bloco.A = bloco.x_inicial;									
+					bloco.B = bloco.v_inicial + (bloco.x_inicial*bloco.beta);					
+														
+					bloco.x = (bloco.A + bloco.B*t)*Math.pow(Math.E,-bloco.beta*t);										
+				}	
+				               
+                //limpa o desenho com o método clearRect()
+                context.clearRect(0, 0, widthCanvasAnimacao, heightCanvasAnimacao);		
+
+                //desenha o bloco através do fillRect()                                
+                context.fillRect(bloco.x + widthCanvasAnimacao / 2 - 25, heightCanvasAnimacao - (heightCanvasAnimacao / 2 + 25), 50, 50);							
+			}
+
+            function comecarDesenho() {
+                //pega o momento agora
+                var date = new Date();
+
+                //atribui para agora o momento inicial do bloco
+                primeiroTempo = date.getTime();
+
+                //tambem coloca para o tempo do ultimo frame, somente para iniciar o movimento
+                ultimoTempo = primeiroTempo;                       
+
+		        bloco.b = parseFloat($("#b").val());
+		        mola.k = parseFloat($("#k").val());				
+                bloco.massa = parseFloat($("#massa").val());                
+		        bloco.v_inicial = parseFloat($("#vi").val());		
+		        bloco.x_inicial = 0;                
+                bloco.beta = (bloco.b / (2*bloco.massa));                
+								
+		        //joga o canvas nas variáveis declaradas globalmente
+                canvas = document.getElementById("canvasAnimacao");
+                context = canvas.getContext("2d");
+				
+		        //funções de movimento do mouse
+		        canvas.onmousemove = getMousePosition;
+				
+                canvas.onmousedown = function(e) {					
+                  if (e.which == 1) {
+                    getMousePosition(e);
+                    mouse.clicado = true;		
+                    t = 0;
+                  }
+                };
+				
+              canvas.onmouseup = function(e) { 
+                if (e.which == 1) {
+                  mouse.clicado = false;		
+                  t = 0;
+                }
+            };                                               				
+								
+                //chama o loop do setInterval e armazena em uma variável para uma possível parada
+                controleDesenho = setInterval(redesenhar, 1000 / 60);
+            }
+
+            //quando a página inteira carregar
+            $(document).ready(function () {
+			
+				$("#valorb").html($("#b").val());				
+				$("#b").change(function() {
+					$("#valorb").html($("#b").val());				
+				});
+				
+				$("#valorvi").html($("#vi").val());				
+				$("#vi").change(function() {
+					$("#valorvi").html($("#vi").val());				
+				});
+				
+				$("#valork").html($("#k").val());				
+				$("#k").change(function() {
+					$("#valork").html($("#k").val());				
+				});
+				
+				$("#valormassa").html($("#massa").val());				
+				$("#massa").change(function() {
+					$("#valormassa").html($("#massa").val());				
+				});
+				
+                //associa o comeco do desenho ao clique do botão "Start"
+                $("#start").click(function () {
+                    $(".valores").prop('disabled', true);
+					comecarDesenho();					
+                });
+				
+                //para o movimento ao clicar no botão "Parar"
+                $("#stop").click(function () {					
+					//limpa o desenho com o método clearRect()
+					context.clearRect(0, 0, widthCanvasAnimacao, heightCanvasAnimacao);		
+                    clearInterval(controleDesenho);
+					$(".valores").prop('disabled', false);
+                });
+				
+            });		
+		</script>
+		
+		<style>
+		
+			canvas {
+				display:block;
+				margin:10px auto;
+				border:1px solid black;
+				height:400px;
+				width:800px;
+			}
+			
+			div {
+				float:left;
+				margin : 0px auto;
+				min-width : 800px;
+				padding : 5px;
+			}
+			
+			.controls {
+				width:400px;
+				margin:10px auto;
+			}
+			
+			.controls > div {
+				border-bottom:1px solid #EEE;
+				padding:5px 0;
+			}
+			
+			.controls label {
+				width:200px;
+				display:inline-block;
+			}
+			
+			.controls input {
+				vertical-align:middle;
+			}
+	
+		</style>
+        <!--fim do cabecalho do documento HTML5-->
+    </head>
+    <!--começo do corpo do documento HTML5-->
+    
+    <body>
+		Oscilador Harmonico Amortecido - Caso crítico<br>
+		Defina os parâmetros e clique em "Começar" para iniciar o movimento<br>
+		Utilize o mouse para arrastar e soltar o bloco na dentro do quadro.<br>
+		
+        <!--define o container onde serão armazenados os canvas e cria um canvas com 400px de altura e 800px de largura-->
+        <div id="containerCanvas">
+            <canvas id="canvasAnimacao" height="400" width="800">Melhor pegar um browser melhor! Use o Chrome ou Firefox!</canvas>
+        </div>
+        <!--define o container onde ficarão os controles de "Começar" e "Parar"-->
+        <div id="containerControles" class="controls">
+		
+		
+			Parametro "b":
+			<input type="range" min="0" max="10" value="0" step="0.1" name="b" id="b" class="valores">
+			<br>
+			Valor "b":
+			<span id="valorb"></span>
+			
+			<br>
+			<br>
+			
+			Parametro de Velocidade Inicial:
+			<input type="range" min="-10" max="10" value="0" step="0.1" name="vi" id="vi" class="valores">
+			<br>
+			Valor da Velocidade Inicial:
+			<span id="valorvi"></span>
+			
+			<br>
+			<br>
+			
+			Parametro de Mola:
+			<input type="range" min="0.01" max="10" value="0" step="0.1" name="k" id="k" class="valores">
+			<br>
+			Valor da Mola:
+			<span id="valork"></span>
+			
+			<br>
+			<br>
+			
+			Parametro da Massa:
+			<input type="range" min="100" max="1000" value="0" step="1" name="massa" id="massa" class="valores">
+			<br>
+			Valor da Massa:
+			<span id="valormassa"></span>
+			
+            <div>
+                <input id="start" type="button" name="Start" value="Começar" class="botao"></input>
+            </div>
+            <div>
+                <input id="stop" type="button" name="Start" value="Parar" class="botao"></input>
+            </div>
+        </div>
+        <!--fim do corpo do documento HTML5-->
+    </body>
+    <!--fim do documento HTML5-->
+
+</html>
